@@ -18,7 +18,15 @@ TICKERS = {
     "NVDA": "Nvidia",
     "GOOGL": "Alphabet",
     "AMZN": "Amazon",
-    "META": "Meta"
+    "META": "Meta",
+
+    # added these to make the sample more diverse
+    "ZM": "Zoom",
+    "SNAP": "Snap",
+    "SNOW": "Snowflake",
+    "NET": "Cloudflare",
+    "ROKU": "Roku",
+    "DBX": "Dropbox",
 }
 
 YEARS = [2023, 2024, 2025]

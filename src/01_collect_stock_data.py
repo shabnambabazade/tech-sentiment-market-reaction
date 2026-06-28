@@ -9,7 +9,15 @@ TICKERS = {
     "NVDA": "Nvidia",
     "GOOGL": "Alphabet",
     "AMZN": "Amazon",
-    "META": "Meta"
+    "META": "Meta",
+
+    # added these to make the sample more diverse
+    "ZM": "Zoom",
+    "SNAP": "Snap",
+    "SNOW": "Snowflake",
+    "NET": "Cloudflare",
+    "ROKU": "Roku",
+    "DBX": "Dropbox",
 }
 START_DATE = "2023-01-01"
 END_DATE = "2026-01-01"
@@ -49,6 +57,11 @@ stock_long = stock_long.rename(columns={
 })
 
 stock_long["company"] = stock_long["ticker"].map(TICKERS)
+large_tech = ["AAPL", "MSFT", "NVDA", "GOOGL", "AMZN", "META"]
+
+stock_long["firm_group"] = stock_long["ticker"].apply(
+    lambda ticker: "Large tech" if ticker in large_tech else "Smaller listed tech"
+)
 stock_long["date"] = pd.to_datetime(stock_long["date"])
 stock_long = stock_long.sort_values(["ticker", "date"])
 
