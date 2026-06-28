@@ -6,11 +6,14 @@ import pandas as pd
 import requests
 from dotenv import load_dotenv
 
+
 load_dotenv()
+
 API_KEY = os.getenv("ALPHA_VANTAGE_API_KEY")
 
 if API_KEY is None:
     raise ValueError("API key not found. Please check your .env file.")
+
 
 TICKERS = {
     "AAPL": "Apple",
@@ -29,12 +32,45 @@ TICKERS = {
     "DBX": "Dropbox",
 }
 
+
 YEARS = [2023, 2024, 2025]
 
+# keeping this below the daily API limit to be safe
+MAX_REQUESTS_THIS_RUN = 20
+
 RAW_DIR = Path("data/raw")
+CACHE_DIR = RAW_DIR / "alpha_vantage_cache"
+
 RAW_DIR.mkdir(parents=True, exist_ok=True)
+CACHE_DIR.mkdir(parents=True, exist_ok=True)
+
+
+NEWS_COLUMNS = [
+    "ticker",
+    "company",
+    "year",
+    "published_at",
+    "title",
+    "summary",
+    "source",
+    "url",
+    "ticker_sentiment_score",
+    "ticker_sentiment_label",
+    "relevance_score",
+    "overall_sentiment_score",
+    "overall_sentiment_label",
+    "topics",
+]
+
 
 def fetch_news_for_ticker_year(ticker, company, year):
+    cache_path = CACHE_DIR / f"alpha_vantage_news_{ticker}_{year}.csv"
+
+    if cache_path.exists():
+        print(f"Using saved file for {ticker} in {year}")
+        cached_df = pd.read_csv(cache_path)
+        return cached_df.to_dict("records"), False
+
     time_from = f"{year}0101T0000"
     time_to = f"{year}1231T2359"
 
@@ -47,7 +83,7 @@ def fetch_news_for_ticker_year(ticker, company, year):
         "time_to": time_to,
         "sort": "EARLIEST",
         "limit": 1000,
-        "apikey": API_KEY
+        "apikey": API_KEY,
     }
 
     print(f"Collecting news for {ticker} ({company}) in {year}...")
@@ -58,17 +94,17 @@ def fetch_news_for_ticker_year(ticker, company, year):
     if "Information" in data:
         print("API information message:")
         print(data["Information"])
-        return []
+        return [], True
 
     if "Note" in data:
         print("API limit note:")
         print(data["Note"])
-        return []
+        return [], True
 
     if "Error Message" in data:
         print("API error message:")
         print(data["Error Message"])
-        return []
+        return [], True
 
     articles = data.get("feed", [])
     rows = []
@@ -92,11 +128,16 @@ def fetch_news_for_ticker_year(ticker, company, year):
                     "relevance_score": item.get("relevance_score"),
                     "overall_sentiment_score": article.get("overall_sentiment_score"),
                     "overall_sentiment_label": article.get("overall_sentiment_label"),
-                    "topics": json.dumps(article.get("topics", []))
+                    "topics": json.dumps(article.get("topics", [])),
                 })
 
+    cache_df = pd.DataFrame(rows, columns=NEWS_COLUMNS)
+    cache_df.to_csv(cache_path, index=False)
+
     print(f"Articles collected: {len(rows)}")
-    return rows
+    print(f"Saved cache file: {cache_path}")
+
+    return rows, True
 
 
 all_rows = []
@@ -104,21 +145,29 @@ request_count = 0
 
 for ticker, company in TICKERS.items():
     for year in YEARS:
-        rows = fetch_news_for_ticker_year(ticker, company, year)
+        if request_count >= MAX_REQUESTS_THIS_RUN:
+            print("\nStopping here for today to avoid using too many API requests.")
+            print("Run this script again later and it will continue using the saved files.")
+            break
+
+        rows, used_request = fetch_news_for_ticker_year(ticker, company, year)
         all_rows.extend(rows)
-        request_count += 1
 
-        # Free API has a daily request limit, so we do not send requests too fast.
-        time.sleep(5)
+        if used_request:
+            request_count += 1
+            time.sleep(5)
+
+    if request_count >= MAX_REQUESTS_THIS_RUN:
+        break
 
 
-news_df = pd.DataFrame(all_rows)
+news_df = pd.DataFrame(all_rows, columns=NEWS_COLUMNS)
 
 if not news_df.empty:
     news_df["published_at"] = pd.to_datetime(
         news_df["published_at"],
         format="%Y%m%dT%H%M%S",
-        errors="coerce"
+        errors="coerce",
     )
 
     news_df["date"] = news_df["published_at"].dt.date
@@ -127,7 +176,7 @@ if not news_df.empty:
     numeric_columns = [
         "ticker_sentiment_score",
         "relevance_score",
-        "overall_sentiment_score"
+        "overall_sentiment_score",
     ]
 
     for column in numeric_columns:
@@ -138,8 +187,8 @@ output_path = RAW_DIR / "alpha_vantage_news_2023_2025.csv"
 news_df.to_csv(output_path, index=False)
 
 print("\nFinished collecting news data.")
-print(f"Total API requests used: {request_count}")
-print(f"Saved file: {output_path}")
+print(f"New API requests used in this run: {request_count}")
+print(f"Saved final file: {output_path}")
 
 print("\nDataset shape:")
 print(news_df.shape)
