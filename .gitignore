@@ -10,3 +10,4 @@ data/raw/
 data/processed/news_with_negative_categories_2023_2025.csv
 outputs/tables/manual_validation_sample.csv
 outputs/tables/category_examples_for_manual_check.csv
+backups/
