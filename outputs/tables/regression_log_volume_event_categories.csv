@@ -1,0 +1,7 @@
+model,variable,category,coefficient,std_error,p_value,stars,coefficient_with_stars,std_error_formatted,observations,r_squared
+Log trading volume,neg_earnings_guidance,Earnings/guidance events,0.0896274555617443,0.0230994491331415,0.000104426853721,***,0.090***,(0.023),9024,0.935474510573418
+Log trading volume,neg_demand_growth,Demand/growth events,0.0472696143512391,0.0248745464410197,0.0573910525517851,*,0.047*,(0.025),9024,0.935474510573418
+Log trading volume,neg_legal_regulatory,Legal/regulatory events,0.0173617096650791,0.0222479912911141,0.4351719385697542,,0.017,(0.022),9024,0.935474510573418
+Log trading volume,neg_product_technology,Product/technology problems,-0.0245936284448844,0.0387189330640801,0.5253087259885534,,-0.025,(0.039),9024,0.935474510573418
+Log trading volume,neg_strategy_management,Strategy/management changes,-0.0030221994767158,0.0253396390248252,0.9050633033825136,,-0.003,(0.025),9024,0.935474510573418
+Log trading volume,neg_competition_pressure,Competition pressure,-0.009619501800713,0.0313501115661198,0.7589643452649116,,-0.010,(0.031),9024,0.935474510573418

@@ -1,0 +1,7 @@
+category,column,category_article_count,firm_days_with_category,average_same_day_return_pct,average_next_day_return_pct,average_log_volume
+Earnings/guidance events,neg_earnings_guidance,503,436,-0.27931551322422193,-0.06728313497907205,17.67077076602204
+Demand/growth events,neg_demand_growth,419,374,-0.011835971730346747,-0.06366150150669633,17.617101754779938
+Legal/regulatory events,neg_legal_regulatory,423,383,0.16987139872532436,0.14804757570096805,17.220002650433806
+Product/technology problems,neg_product_technology,33,30,0.1434393975837996,0.06899335741990463,16.801286975743366
+Strategy/management changes,neg_strategy_management,234,210,0.22666801481617413,0.319743015268226,17.534663956431523
+Competition pressure,neg_competition_pressure,196,190,-0.4781805014575287,0.07932216472575598,17.71151004862886

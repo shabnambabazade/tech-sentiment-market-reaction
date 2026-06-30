@@ -1,0 +1,7 @@
+model,variable,category,coefficient,std_error,p_value,stars,coefficient_with_stars,std_error_formatted,observations,r_squared
+Next-day return,neg_earnings_guidance,Earnings/guidance events,-0.2467250816567743,0.1481610045999704,0.0958629314152007,*,-0.247*,(0.148),9012,0.3909335508282733
+Next-day return,neg_demand_growth,Demand/growth events,-0.065360056464924,0.1214665961670895,0.5905143718180594,,-0.065,(0.121),9012,0.3909335508282733
+Next-day return,neg_legal_regulatory,Legal/regulatory events,0.1971350974591695,0.0920129031585973,0.032155494318256,**,0.197**,(0.092),9012,0.3909335508282733
+Next-day return,neg_product_technology,Product/technology problems,-0.0786888142215835,0.2232822369381609,0.7245243519115192,,-0.079,(0.223),9012,0.3909335508282733
+Next-day return,neg_strategy_management,Strategy/management changes,0.1818777321576679,0.1470269030762399,0.2160733136725412,,0.182,(0.147),9012,0.3909335508282733
+Next-day return,neg_competition_pressure,Competition pressure,-0.0533874142791905,0.1409386930528145,0.7048372444194142,,-0.053,(0.141),9012,0.3909335508282733

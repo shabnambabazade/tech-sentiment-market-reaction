@@ -1,0 +1,13 @@
+firm_group,category,column,category_article_count,firm_days_with_category
+Large tech,Earnings/guidance events,neg_earnings_guidance,452,396
+Large tech,Demand/growth events,neg_demand_growth,359,323
+Large tech,Legal/regulatory events,neg_legal_regulatory,356,329
+Large tech,Product/technology problems,neg_product_technology,28,25
+Large tech,Strategy/management changes,neg_strategy_management,224,200
+Large tech,Competition pressure,neg_competition_pressure,194,188
+Smaller listed tech,Earnings/guidance events,neg_earnings_guidance,51,40
+Smaller listed tech,Demand/growth events,neg_demand_growth,60,51
+Smaller listed tech,Legal/regulatory events,neg_legal_regulatory,67,54
+Smaller listed tech,Product/technology problems,neg_product_technology,5,5
+Smaller listed tech,Strategy/management changes,neg_strategy_management,10,10
+Smaller listed tech,Competition pressure,neg_competition_pressure,2,2
