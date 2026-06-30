@@ -2,126 +2,117 @@ from pathlib import Path
 import pandas as pd
 import statsmodels.formula.api as smf
 
-INPUT_PATH = Path("data/processed/final_analysis_dataset_2023_2025.csv")
-TABLES_DIR = Path("outputs/tables")
-TABLES_DIR.mkdir(parents=True, exist_ok=True)
+
+DATA_PATH = Path("data/processed/final_analysis_dataset_2023_2025.csv")
+TABLE_DIR = Path("outputs/tables")
+
+TABLE_DIR.mkdir(parents=True, exist_ok=True)
+
 
 print("Loading final analysis dataset...")
+panel = pd.read_csv(DATA_PATH)
 
-df = pd.read_csv(INPUT_PATH)
+panel["date"] = pd.to_datetime(panel["date"], errors="coerce")
+panel["date_fe"] = panel["date"].dt.strftime("%Y-%m-%d")
 
-df["date"] = pd.to_datetime(df["date"], errors="coerce")
-df["date_fe"] = df["date"].astype(str)
 
-print("Data loaded.")
-print("Shape:", df.shape)
-
-# These are our main explanatory variables:
-# each variable counts how many negative news articles of that type appeared for a firm-day.
-news_variables = [
-    "neg_earnings",
-    "neg_growth",
-    "neg_regulation",
-    "neg_competition",
-    "neg_macro"
+category_columns = [
+    "neg_earnings_guidance",
+    "neg_demand_growth",
+    "neg_legal_regulatory",
+    "neg_product_technology",
+    "neg_strategy_management",
+    "neg_competition_pressure",
 ]
 
-# We keep only rows where key outcome variables are available.
+category_labels = {
+    "neg_earnings_guidance": "Earnings/guidance events",
+    "neg_demand_growth": "Demand/growth events",
+    "neg_legal_regulatory": "Legal/regulatory events",
+    "neg_product_technology": "Product/technology problems",
+    "neg_strategy_management": "Strategy/management changes",
+    "neg_competition_pressure": "Competition pressure",
+}
 
-regression_df = df.dropna(
-    subset=[
-        "daily_return",
-        "next_day_return",
-        "log_volume"
-    ] + news_variables
-).copy()
 
-print("Regression sample shape:", regression_df.shape)
+# returns are converted to percentage points
+panel["daily_return_pct"] = panel["daily_return"] * 100
+panel["next_day_return_pct"] = panel["next_day_return"] * 100
 
-# Helper function for running regressions
 
-def run_regression(outcome_variable, output_name):
-    """
-    Runs an OLS regression with firm fixed effects and date fixed effects.
+def stars(p_value):
+    if p_value < 0.01:
+        return "***"
+    if p_value < 0.05:
+        return "**"
+    if p_value < 0.10:
+        return "*"
+    return ""
 
-    The model is:
-    outcome = negative news categories + firm fixed effects + date fixed effects
-    """
 
-    formula = (
-        f"{outcome_variable} ~ "
-        f"neg_earnings + neg_growth + neg_regulation + neg_competition + neg_macro "
-        f"+ C(ticker) + C(date_fe)"
-    )
+rhs = " + ".join(category_columns) + " + C(ticker) + C(date_fe)"
 
-    print(f"\nRunning regression for: {outcome_variable}")
+models = {
+    "Same-day return": "daily_return_pct",
+    "Next-day return": "next_day_return_pct",
+    "Log trading volume": "log_volume",
+}
 
-    model = smf.ols(
-        formula=formula,
-        data=regression_df
-    ).fit(cov_type="HC1")
+all_results = []
+model_summary = []
 
-    print(model.summary())
+for model_name, outcome in models.items():
+    model_data = panel.dropna(subset=[outcome]).copy()
 
-    # Save only the main coefficients we care about.
-    results_table = pd.DataFrame({
-        "variable": model.params.index,
-        "coefficient": model.params.values,
-        "std_error": model.bse.values,
-        "t_stat": model.tvalues.values,
-        "p_value": model.pvalues.values
+    formula = f"{outcome} ~ {rhs}"
+
+    print("\nRunning model:", model_name)
+    print("Formula:", formula)
+    print("Observations:", len(model_data))
+
+    model = smf.ols(formula, data=model_data).fit(cov_type="HC1")
+
+    model_summary.append({
+        "model": model_name,
+        "outcome": outcome,
+        "observations": int(model.nobs),
+        "r_squared": model.rsquared,
+        "adj_r_squared": model.rsquared_adj,
     })
 
-    main_results = results_table[
-        results_table["variable"].isin(news_variables)
-    ].copy()
+    for column in category_columns:
+        all_results.append({
+            "model": model_name,
+            "variable": column,
+            "category": category_labels[column],
+            "coefficient": model.params[column],
+            "std_error": model.bse[column],
+            "p_value": model.pvalues[column],
+            "stars": stars(model.pvalues[column]),
+            "coefficient_with_stars": f"{model.params[column]:.3f}{stars(model.pvalues[column])}",
+            "std_error_formatted": f"({model.bse[column]:.3f})",
+            "observations": int(model.nobs),
+            "r_squared": model.rsquared,
+        })
 
-    output_path = TABLES_DIR / output_name
-    main_results.to_csv(output_path, index=False)
 
-    print(f"\nSaved main regression results to: {output_path}")
+results = pd.DataFrame(all_results)
+summary = pd.DataFrame(model_summary)
 
-    return model, main_results
+results.to_csv(TABLE_DIR / "regression_results_event_categories.csv", index=False)
+summary.to_csv(TABLE_DIR / "regression_model_summary_event_categories.csv", index=False)
 
-# Main regressions
 
-daily_return_model, daily_return_results = run_regression(
-    outcome_variable="daily_return",
-    output_name="regression_daily_return.csv"
-)
+print("\nRegression results:")
+print(results[[
+    "model",
+    "category",
+    "coefficient_with_stars",
+    "std_error_formatted",
+    "p_value",
+]])
 
-next_day_return_model, next_day_return_results = run_regression(
-    outcome_variable="next_day_return",
-    output_name="regression_next_day_return.csv"
-)
+print("\nModel summary:")
+print(summary)
 
-log_volume_model, log_volume_results = run_regression(
-    outcome_variable="log_volume",
-    output_name="regression_log_volume.csv"
-)
-
-# Create one combined table for easier reporting
-
-daily_return_results["outcome"] = "Daily return"
-next_day_return_results["outcome"] = "Next-day return"
-log_volume_results["outcome"] = "Log trading volume"
-
-combined_results = pd.concat(
-    [
-        daily_return_results,
-        next_day_return_results,
-        log_volume_results
-    ],
-    ignore_index=True
-)
-
-combined_output_path = TABLES_DIR / "combined_main_regression_results.csv"
-combined_results.to_csv(combined_output_path, index=False)
-
-print("\nCombined regression table saved to:")
-print(combined_output_path)
-
-print("\nCombined main results:")
-print(combined_results)
-
-print("\nRegression analysis completed successfully.")
+print("\nRegression tables saved to outputs/tables/")

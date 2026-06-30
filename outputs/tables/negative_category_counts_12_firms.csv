@@ -1,0 +1,7 @@
+category,column,article_count,firm_days_with_category
+Earnings/guidance events,neg_earnings_guidance,503,436
+Demand/growth events,neg_demand_growth,419,374
+Legal/regulatory events,neg_legal_regulatory,423,383
+Product/technology problems,neg_product_technology,33,30
+Strategy/management changes,neg_strategy_management,234,210
+Competition pressure,neg_competition_pressure,196,190

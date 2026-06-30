@@ -1,7 +1,0 @@
-ticker,company,first_date,last_date,observations,negative_news_days,total_negative_articles
-AAPL,Apple,2023-01-03,2025-12-31,752,169,214
-AMZN,Amazon,2023-01-03,2025-12-31,752,156,187
-GOOGL,Alphabet,2023-01-03,2025-12-31,752,137,163
-META,Meta,2023-01-03,2025-12-31,752,149,191
-MSFT,Microsoft,2023-01-03,2025-12-31,752,128,161
-NVDA,Nvidia,2023-01-03,2025-12-31,752,121,154

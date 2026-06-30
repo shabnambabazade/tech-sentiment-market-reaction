@@ -1,91 +1,81 @@
 from pathlib import Path
 import pandas as pd
 
-INPUT_PATH = Path("data/processed/news_with_negative_categories_2023_2025.csv")
 
-TABLES_DIR = Path("outputs/tables")
-TABLES_DIR.mkdir(parents=True, exist_ok=True)
+NEWS_PATH = Path("data/processed/news_with_negative_categories_2023_2025.csv")
+OUTPUT_DIR = Path("outputs/validation_samples")
 
-print("Loading processed news data...")
+OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 
-news = pd.read_csv(INPUT_PATH)
 
-news["date"] = pd.to_datetime(news["date"], errors="coerce")
+print("Loading categorized news data...")
+news = pd.read_csv(NEWS_PATH)
+
 
 category_columns = [
-    "neg_earnings",
-    "neg_growth",
-    "neg_regulation",
-    "neg_competition",
-    "neg_macro",
-    "neg_other"
+    "neg_earnings_guidance",
+    "neg_demand_growth",
+    "neg_legal_regulatory",
+    "neg_product_technology",
+    "neg_strategy_management",
+    "neg_competition_pressure",
+    "neg_other",
 ]
 
-display_columns = [
+category_labels = {
+    "neg_earnings_guidance": "earnings_guidance",
+    "neg_demand_growth": "demand_growth",
+    "neg_legal_regulatory": "legal_regulatory",
+    "neg_product_technology": "product_technology",
+    "neg_strategy_management": "strategy_management",
+    "neg_competition_pressure": "competition_pressure",
+    "neg_other": "other_negative",
+}
+
+
+sample_columns = [
     "ticker",
     "company",
     "date",
     "title",
     "summary",
     "ticker_sentiment_label",
-    "neg_earnings",
-    "neg_growth",
-    "neg_regulation",
-    "neg_competition",
-    "neg_macro",
-    "neg_other"
-]
+] + category_columns
 
-# 1. Create examples for each category
-category_examples = []
 
-for category in category_columns:
-    subset = news[
-        (news["is_negative"] == 1) &
-        (news[category] == 1)
-    ].copy()
+all_samples = []
 
-    if len(subset) > 0:
-        examples = subset[display_columns].head(10).copy()
-        examples.insert(0, "category_checked", category)
-        category_examples.append(examples)
+for column in category_columns:
+    category_data = news[news[column] == 1].copy()
 
-if category_examples:
-    category_examples_df = pd.concat(category_examples, ignore_index=True)
+    if len(category_data) == 0:
+        print(column, "has no observations.")
+        continue
+
+    sample_size = min(15, len(category_data))
+
+    sample = category_data.sample(
+        n=sample_size,
+        random_state=42,
+    )[sample_columns]
+
+    sample["sample_category"] = category_labels[column]
+
+    output_path = OUTPUT_DIR / f"validation_sample_{category_labels[column]}.csv"
+    sample.to_csv(output_path, index=False)
+
+    all_samples.append(sample)
+
+    print(column, "sample saved:", output_path)
+
+
+if all_samples:
+    combined = pd.concat(all_samples, ignore_index=True)
+    combined_path = OUTPUT_DIR / "validation_sample_all_categories.csv"
+    combined.to_csv(combined_path, index=False)
+
+    print("\nCombined validation sample saved to:")
+    print(combined_path)
+    print("Rows:", len(combined))
 else:
-    category_examples_df = pd.DataFrame(columns=["category_checked"] + display_columns)
-
-category_examples_path = TABLES_DIR / "category_examples_for_manual_check.csv"
-category_examples_df.to_csv(category_examples_path, index=False)
-
-# 2. Create random manual validation sample
-
-negative_news = news[news["is_negative"] == 1].copy()
-sample_size = min(50, len(negative_news))
-manual_sample = negative_news.sample(
-    n=sample_size,
-    random_state=42
-)[display_columns].copy()
-
-# Add empty columns for manual checking.
-
-manual_sample["manual_category_correct"] = ""
-manual_sample["manual_comment"] = ""
-
-manual_sample_path = TABLES_DIR / "manual_validation_sample.csv"
-manual_sample.to_csv(manual_sample_path, index=False)
-
-
-print("\nCategory examples saved to:")
-print(category_examples_path)
-
-print("\nManual validation sample saved to:")
-print(manual_sample_path)
-
-print("\nCategory examples preview:")
-print(category_examples_df.head(20))
-
-print("\nManual validation sample preview:")
-print(manual_sample.head(20))
-
-print("\nValidation sample created successfully.")
+    print("No validation samples created.")

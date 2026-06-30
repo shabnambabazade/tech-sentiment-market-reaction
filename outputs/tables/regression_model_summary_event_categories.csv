@@ -1,0 +1,4 @@
+model,outcome,observations,r_squared,adj_r_squared
+Same-day return,daily_return_pct,9012,0.3918875297291612,0.3353103506052246
+Next-day return,next_day_return_pct,9012,0.3909335508282733,0.3342676160254211
+Log trading volume,log_volume,9024,0.9354745105734179,0.9294714123445124

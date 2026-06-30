@@ -1,122 +1,88 @@
 from pathlib import Path
 import pandas as pd
 
-INPUT_PATH = Path("outputs/tables/combined_main_regression_results.csv")
-OUTPUT_DIR = Path("outputs/tables")
-OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 
-print("Loading combined regression results...")
-results = pd.read_csv(INPUT_PATH)
-print("Raw results loaded.")
-print(results)
+RESULTS_PATH = Path("outputs/tables/regression_results_event_categories.csv")
+SUMMARY_PATH = Path("outputs/tables/regression_model_summary_event_categories.csv")
+TABLE_DIR = Path("outputs/tables")
 
-# 1. Make variable names readable
-variable_labels = {
-    "neg_earnings": "Negative earnings news",
-    "neg_growth": "Negative growth news",
-    "neg_regulation": "Negative regulation news",
-    "neg_competition": "Negative competition news",
-    "neg_macro": "Negative macro news"
-}
-
-results["variable_label"] = results["variable"].map(variable_labels)
-
-# 2. Add significance stars
-
-def significance_stars(p_value):
-    if p_value < 0.01:
-        return "***"
-    elif p_value < 0.05:
-        return "**"
-    elif p_value < 0.10:
-        return "*"
-    else:
-        return ""
+TABLE_DIR.mkdir(parents=True, exist_ok=True)
 
 
-results["stars"] = results["p_value"].apply(significance_stars)
-
-# 3. Format coefficients
-# Returns are in decimal form. Example: -0.0036 means -0.36 percentage points.
-# For return outcomes, we multiply by 100.
-# For log volume, we keep the coefficient as it is.
-
-def format_coefficient(row):
-    coefficient = row["coefficient"]
-    stars = row["stars"]
-    outcome = row["outcome"]
-
-    if outcome in ["Daily return", "Next-day return"]:
-        formatted_value = coefficient * 100
-        return f"{formatted_value:.3f}{stars}"
-    else:
-        return f"{coefficient:.3f}{stars}"
+print("Loading regression results...")
+results = pd.read_csv(RESULTS_PATH)
+summary = pd.read_csv(SUMMARY_PATH)
 
 
-results["formatted_coefficient"] = results.apply(format_coefficient, axis=1)
-
-
-# 4. Create a clean table for the report
-
-formatted_table = results.pivot(
-    index="variable_label",
-    columns="outcome",
-    values="formatted_coefficient"
-).reset_index()
-
-# Put variables in a logical order.
-order = [
-    "Negative earnings news",
-    "Negative growth news",
-    "Negative regulation news",
-    "Negative competition news",
-    "Negative macro news"
+model_order = [
+    "Same-day return",
+    "Next-day return",
+    "Log trading volume",
 ]
 
-formatted_table["order"] = formatted_table["variable_label"].apply(lambda x: order.index(x))
-formatted_table = formatted_table.sort_values("order").drop(columns="order")
+category_order = [
+    "Earnings/guidance events",
+    "Demand/growth events",
+    "Legal/regulatory events",
+    "Product/technology problems",
+    "Strategy/management changes",
+    "Competition pressure",
+]
 
-# Rename first column.
-formatted_table = formatted_table.rename(columns={
-    "variable_label": "Negative news category"
-})
+
+rows = []
+
+for category in category_order:
+    row = {"Category": category}
+
+    for model in model_order:
+        match = results[
+            (results["category"] == category)
+            & (results["model"] == model)
+        ]
+
+        if len(match) == 0:
+            row[model] = ""
+        else:
+            coef = match.iloc[0]["coefficient_with_stars"]
+            se = match.iloc[0]["std_error_formatted"]
+            row[model] = f"{coef} {se}"
+
+    rows.append(row)
 
 
-# 5. Save formatted table
+for model in model_order:
+    model_info = summary[summary["model"] == model].iloc[0]
 
-output_path = OUTPUT_DIR / "formatted_regression_results.csv"
-formatted_table.to_csv(output_path, index=False)
+    row_obs = {"Category": "Observations"}
+    row_r2 = {"Category": "R-squared"}
+
+    for column_model in model_order:
+        if column_model == model:
+            row_obs[column_model] = int(model_info["observations"])
+            row_r2[column_model] = round(model_info["r_squared"], 3)
+        else:
+            row_obs[column_model] = ""
+            row_r2[column_model] = ""
+
+    rows.append(row_obs)
+    rows.append(row_r2)
+
+
+final_table = pd.DataFrame(rows)
+
+csv_path = TABLE_DIR / "formatted_regression_table_event_categories.csv"
+txt_path = TABLE_DIR / "formatted_regression_table_event_categories.txt"
+
+final_table.to_csv(csv_path, index=False)
+
+with open(txt_path, "w", encoding="utf-8") as file:
+    file.write(final_table.to_string(index=False))
+
 
 print("\nFormatted regression table saved to:")
-print(output_path)
+print(csv_path)
+print(txt_path)
 
 print("\nFormatted table:")
-print(formatted_table)
-
-# 6. Save interpretation helper table
-
-interpretation_table = results[
-    [
-        "outcome",
-        "variable_label",
-        "coefficient",
-        "std_error",
-        "p_value",
-        "stars"
-    ]
-].copy()
-
-interpretation_table["coefficient_percent_for_returns"] = interpretation_table.apply(
-    lambda row: row["coefficient"] * 100
-    if row["outcome"] in ["Daily return", "Next-day return"]
-    else None,
-    axis=1
-)
-
-interpretation_output_path = OUTPUT_DIR / "regression_interpretation_helper.csv"
-interpretation_table.to_csv(interpretation_output_path, index=False)
-
-print("\nInterpretation helper table saved to:")
-print(interpretation_output_path)
-
-print("\nRegression formatting completed successfully.")
+print(final_table.to_string(index=False))

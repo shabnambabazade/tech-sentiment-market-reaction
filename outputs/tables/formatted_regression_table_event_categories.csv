@@ -1,0 +1,13 @@
+Category,Same-day return,Next-day return,Log trading volume
+Earnings/guidance events,-0.496*** (0.147),-0.247* (0.148),0.090*** (0.023)
+Demand/growth events,0.255* (0.145),-0.065 (0.121),0.047* (0.025)
+Legal/regulatory events,0.014 (0.099),0.197** (0.092),0.017 (0.022)
+Product/technology problems,0.467** (0.195),-0.079 (0.223),-0.025 (0.039)
+Strategy/management changes,0.093 (0.158),0.182 (0.147),-0.003 (0.025)
+Competition pressure,-0.197 (0.157),-0.053 (0.141),-0.010 (0.031)
+Observations,9012,,
+R-squared,0.392,,
+Observations,,9012,
+R-squared,,0.391,
+Observations,,,9024
+R-squared,,,0.935

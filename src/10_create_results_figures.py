@@ -2,171 +2,105 @@ from pathlib import Path
 import pandas as pd
 import matplotlib.pyplot as plt
 
-FINAL_DATA_PATH = Path("data/processed/final_analysis_dataset_2023_2025.csv")
-REGRESSION_RESULTS_PATH = Path("outputs/tables/combined_main_regression_results.csv")
 
-FIGURES_DIR = Path("outputs/figures")
-FIGURES_DIR.mkdir(parents=True, exist_ok=True)
+PANEL_PATH = Path("data/processed/final_analysis_dataset_2023_2025.csv")
+RESULTS_PATH = Path("outputs/tables/regression_results_event_categories.csv")
+FIGURE_DIR = Path("outputs/figures")
 
-print("Loading data...")
+FIGURE_DIR.mkdir(parents=True, exist_ok=True)
 
-df = pd.read_csv(FINAL_DATA_PATH)
-reg = pd.read_csv(REGRESSION_RESULTS_PATH)
 
-df["date"] = pd.to_datetime(df["date"], errors="coerce")
+print("Loading data for figures...")
+panel = pd.read_csv(PANEL_PATH)
+results = pd.read_csv(RESULTS_PATH)
 
-print("Data loaded.")
-
-# Figure 1: negative news category counts
 
 category_columns = [
-    "neg_earnings",
-    "neg_growth",
-    "neg_regulation",
-    "neg_competition",
-    "neg_macro"
+    "neg_earnings_guidance",
+    "neg_demand_growth",
+    "neg_legal_regulatory",
+    "neg_product_technology",
+    "neg_strategy_management",
+    "neg_competition_pressure",
 ]
 
 category_labels = {
-    "neg_earnings": "Earnings",
-    "neg_growth": "Growth",
-    "neg_regulation": "Regulation",
-    "neg_competition": "Competition",
-    "neg_macro": "Macro"
+    "neg_earnings_guidance": "Earnings/guidance",
+    "neg_demand_growth": "Demand/growth",
+    "neg_legal_regulatory": "Legal/regulatory",
+    "neg_product_technology": "Product/technology",
+    "neg_strategy_management": "Strategy/management",
+    "neg_competition_pressure": "Competition pressure",
 }
 
+
+# Figure 1: negative category counts
 category_counts = pd.DataFrame({
     "category": [category_labels[col] for col in category_columns],
-    "count": [df[col].sum() for col in category_columns]
+    "count": [int(panel[col].sum()) for col in category_columns],
 })
 
-plt.figure(figsize=(8, 5))
-plt.bar(category_counts["category"], category_counts["count"])
-plt.title("Negative news articles by category")
-plt.xlabel("Negative news category")
-plt.ylabel("Number of firm-day category counts")
-plt.tight_layout()
+category_counts = category_counts.sort_values("count", ascending=True)
 
-output_path = FIGURES_DIR / "fig_1_negative_news_category_counts.png"
-plt.savefig(output_path, dpi=300)
+plt.figure(figsize=(9, 5))
+plt.barh(category_counts["category"], category_counts["count"])
+plt.xlabel("Number of negative article-category observations")
+plt.title("Negative news event categories")
+plt.tight_layout()
+plt.savefig(FIGURE_DIR / "figure_negative_event_category_counts.png", dpi=300)
 plt.close()
 
-print("Saved:", output_path)
 
-# Figure 2: average daily return by category
-
-avg_return_rows = []
-
-for col in category_columns:
-    subset = df[df[col] > 0]
-
-    avg_return_rows.append({
-        "category": category_labels[col],
-        "avg_daily_return_percent": subset["daily_return"].mean() * 100
-    })
-
-avg_return_df = pd.DataFrame(avg_return_rows)
-
-plt.figure(figsize=(8, 5))
-plt.bar(avg_return_df["category"], avg_return_df["avg_daily_return_percent"])
-plt.axhline(0, linewidth=1)
-plt.title("Average same-day return by negative news category")
-plt.xlabel("Negative news category")
-plt.ylabel("Average daily return (%)")
-plt.tight_layout()
-
-output_path = FIGURES_DIR / "fig_2_average_daily_return_by_category.png"
-plt.savefig(output_path, dpi=300)
-plt.close()
-
-print("Saved:", output_path)
-
-# Figure 3: average next-day return by category
-
-avg_next_return_rows = []
-
-for col in category_columns:
-    subset = df[df[col] > 0]
-
-    avg_next_return_rows.append({
-        "category": category_labels[col],
-        "avg_next_day_return_percent": subset["next_day_return"].mean() * 100
-    })
-
-avg_next_return_df = pd.DataFrame(avg_next_return_rows)
-
-plt.figure(figsize=(8, 5))
-plt.bar(avg_next_return_df["category"], avg_next_return_df["avg_next_day_return_percent"])
-plt.axhline(0, linewidth=1)
-plt.title("Average next-day return by negative news category")
-plt.xlabel("Negative news category")
-plt.ylabel("Average next-day return (%)")
-plt.tight_layout()
-
-output_path = FIGURES_DIR / "fig_3_average_next_day_return_by_category.png"
-plt.savefig(output_path, dpi=300)
-plt.close()
-
-print("Saved:", output_path)
-
-# Figure 4: regression coefficients for returns
-reg_return = reg[
-    reg["outcome"].isin(["Daily return", "Next-day return"])
-].copy()
-
-reg_return["category"] = reg_return["variable"].map({
-    "neg_earnings": "Earnings",
-    "neg_growth": "Growth",
-    "neg_regulation": "Regulation",
-    "neg_competition": "Competition",
-    "neg_macro": "Macro"
-})
-
-reg_return["coefficient_percent"] = reg_return["coefficient"] * 100
-
-# Save a clean table too.
-clean_regression_figure_data = reg_return[
-    ["outcome", "category", "coefficient_percent", "p_value"]
-]
-
-clean_regression_figure_data.to_csv(
-    Path("outputs/tables/regression_coefficients_for_return_figure.csv"),
-    index=False
+# Figure 2: negative articles by firm
+firm_counts = (
+    panel
+    .groupby(["ticker", "company", "firm_group"], as_index=False)
+    .agg(negative_articles=("negative_article_count", "sum"))
+    .sort_values("negative_articles", ascending=True)
 )
 
-# Creating one figure for daily return.
-daily = reg_return[reg_return["outcome"] == "Daily return"]
-
-plt.figure(figsize=(8, 5))
-plt.bar(daily["category"], daily["coefficient_percent"])
-plt.axhline(0, linewidth=1)
-plt.title("Regression coefficients: Same-day return")
-plt.xlabel("Negative news category")
-plt.ylabel("Coefficient in percentage points")
+plt.figure(figsize=(9, 5))
+plt.barh(firm_counts["ticker"], firm_counts["negative_articles"])
+plt.xlabel("Number of negative articles")
+plt.title("Negative news by firm")
 plt.tight_layout()
-
-output_path = FIGURES_DIR / "fig_4_regression_coefficients_daily_return.png"
-plt.savefig(output_path, dpi=300)
+plt.savefig(FIGURE_DIR / "figure_negative_articles_by_firm.png", dpi=300)
 plt.close()
 
-print("Saved:", output_path)
 
+# Figure 3: same-day return coefficients
+same_day = results[results["model"] == "Same-day return"].copy()
+same_day["label"] = same_day["variable"].map(category_labels)
+same_day = same_day.sort_values("coefficient")
 
-# Creating one figure for next-day return.
-next_day = reg_return[reg_return["outcome"] == "Next-day return"]
-
-plt.figure(figsize=(8, 5))
-plt.bar(next_day["category"], next_day["coefficient_percent"])
-plt.axhline(0, linewidth=1)
-plt.title("Regression coefficients: Next-day return")
-plt.xlabel("Negative news category")
-plt.ylabel("Coefficient in percentage points")
+plt.figure(figsize=(9, 5))
+plt.barh(same_day["label"], same_day["coefficient"])
+plt.axvline(0, linewidth=1)
+plt.xlabel("Coefficient in percentage points")
+plt.title("Same-day return regression coefficients")
 plt.tight_layout()
-
-output_path = FIGURES_DIR / "fig_5_regression_coefficients_next_day_return.png"
-plt.savefig(output_path, dpi=300)
+plt.savefig(FIGURE_DIR / "figure_same_day_return_coefficients.png", dpi=300)
 plt.close()
 
-print("Saved:", output_path)
 
-print("\nAll result figures were created successfully.")
+# Figure 4: next-day return coefficients
+next_day = results[results["model"] == "Next-day return"].copy()
+next_day["label"] = next_day["variable"].map(category_labels)
+next_day = next_day.sort_values("coefficient")
+
+plt.figure(figsize=(9, 5))
+plt.barh(next_day["label"], next_day["coefficient"])
+plt.axvline(0, linewidth=1)
+plt.xlabel("Coefficient in percentage points")
+plt.title("Next-day return regression coefficients")
+plt.tight_layout()
+plt.savefig(FIGURE_DIR / "figure_next_day_return_coefficients.png", dpi=300)
+plt.close()
+
+
+print("\nFigures saved to:")
+print(FIGURE_DIR)
+
+print("\nCreated files:")
+for path in sorted(FIGURE_DIR.glob("figure_*.png")):
+    print(path)

@@ -1,3 +1,0 @@
-has_negative_news,observations,avg_daily_return_percent,avg_next_day_return_percent,avg_log_volume,group
-0,3652,0.2716445229442581,0.21217652505443313,17.61372003610185,No negative news
-1,860,-0.0986266569053474,0.15435109038070038,17.62383382748857,At least one negative news article
